@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BaristaLens</title>
+    <meta name="description" content="Professional barista latte art photo comparator with pixel-accurate alignment, symmetry guides, and competition scoring rubric." />
+    <meta property="og:title" content="BaristaLens" />
+    <meta property="og:description" content="Professional barista latte art photo comparator with pixel-accurate alignment, symmetry guides, and competition scoring rubric." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    x-data="baristaApp()"
+    x-init="init()"
+    class="bg-[#0b0d10] text-[#f3f4f6] min-h-screen flex flex-col font-sans antialiased selection:bg-amber-600 selection:text-white"
+  >
+    <!-- Top Navigation Header: Strict 3-Zone Contract -->
+    <header class="bg-[#12151a] border-b border-[#212732] sticky top-0 z-50 px-4 sm:px-6 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-8">
+        
+        <!-- Zone 1: Single text element wordmark -->
+        <a
+          href="#workspace"
+          @click.prevent="activeSection = 'workspace'"
+          class="flex items-center gap-2.5 text-lg font-bold tracking-tight text-white whitespace-nowrap shrink-0 hover:opacity-90 transition-opacity"
+        >
+          <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-sm shadow-amber-950">
+            <i data-lucide="coffee" class="w-4 h-4"></i>
+          </span>
+          <span>BaristaLens</span>
+        </a>
+
+        <!-- Zone 2: Navigation Links (single-line, clean text) -->
+        <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-stone-300">
+          <button
+            @click="activeSection = 'workspace'"
+            class="transition-colors whitespace-nowrap shrink-0 pb-0.5 border-b-2"
+            :class="activeSection === 'workspace' ? 'text-amber-400 border-amber-500 font-semibold' : 'border-transparent text-stone-400 hover:text-white'"
+          >
+            Comparator Studio
+          </button>
+          <button
+            @click="activeSection = 'presets'"
+            class="transition-colors whitespace-nowrap shrink-0 pb-0.5 border-b-2"
+            :class="activeSection === 'presets' ? 'text-amber-400 border-amber-500 font-semibold' : 'border-transparent text-stone-400 hover:text-white'"
+          >
+            Pattern Library
+          </button>
+          <button
+            @click="activeSection = 'scorecard'"
+            class="transition-colors whitespace-nowrap shrink-0 pb-0.5 border-b-2"
+            :class="activeSection === 'scorecard' ? 'text-amber-400 border-amber-500 font-semibold' : 'border-transparent text-stone-400 hover:text-white'"
+          >
+            SCA Scorecard
+          </button>
+          <button
+            @click="activeSection = 'history'"
+            class="transition-colors whitespace-nowrap shrink-0 pb-0.5 border-b-2"
+            :class="activeSection === 'history' ? 'text-amber-400 border-amber-500 font-semibold' : 'border-transparent text-stone-400 hover:text-white'"
+          >
+            Pour History (<span x-text="history.length" class="font-tabular"></span>)
+          </button>
+        </nav>
+
+        <!-- Zone 3: 1 Primary Action Button -->
+        <div class="flex items-center gap-2.5 shrink-0">
+          <button
+            @click="exportAnalysis()"
+            class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs sm:text-sm font-semibold transition active:scale-95 shadow-sm shadow-amber-900/40 flex items-center gap-2 whitespace-nowrap shrink-0"
+          >
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Export Snapshot</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile sub-navigation bar -->
+      <div class="md:hidden flex items-center justify-between gap-1 pt-2.5 mt-2 border-t border-[#1e232c] text-xs font-medium">
+        <button
+          @click="activeSection = 'workspace'"
+          class="flex-1 py-1 rounded text-center"
+          :class="activeSection === 'workspace' ? 'bg-[#1c222b] text-amber-400' : 'text-stone-400'"
+        >
+          Studio
+        </button>
+        <button
+          @click="activeSection = 'presets'"
+          class="flex-1 py-1 rounded text-center"
+          :class="activeSection === 'presets' ? 'bg-[#1c222b] text-amber-400' : 'text-stone-400'"
+        >
+          Library
+        </button>
+        <button
+          @click="activeSection = 'scorecard'"
+          class="flex-1 py-1 rounded text-center"
+          :class="activeSection === 'scorecard' ? 'bg-[#1c222b] text-amber-400' : 'text-stone-400'"
+        >
+          Rubric
+        </button>
+        <button
+          @click="activeSection = 'history'"
+          class="flex-1 py-1 rounded text-center"
+          :class="activeSection === 'history' ? 'bg-[#1c222b] text-amber-400' : 'text-stone-400'"
+        >
+          History (<span x-text="history.length" class="font-tabular"></span>)
+        </button>
+      </div>
+    </header>
+
+    <!-- Sub-Header Status / Quick Actions -->
+    <aside class="bg-[#101317] border-b border-[#1b2028] py-2 px-4 sm:px-6">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs text-stone-400">
+        <div class="flex items-center gap-2">
+          <span class="text-stone-300 font-medium flex items-center gap-1.5">
+            <i data-lucide="crosshair" class="w-3.5 h-3.5 text-amber-500"></i>
+            Active Pours:
+          </span>
+          <span class="text-stone-200 truncate max-w-[150px] sm:max-w-[220px]" x-text="cup1Name"></span>
+          <span class="text-stone-600">vs</span>
+          <span class="text-amber-300 truncate max-w-[150px] sm:max-w-[220px]" x-text="cup2Name"></span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            @click="swapCups()"
+            class="px-2.5 py-1 rounded bg-[#181d24] hover:bg-[#202731] border border-[#27303d] text-stone-200 transition active:scale-95 flex items-center gap-1"
+          >
+            <i data-lucide="arrow-left-right" class="w-3 h-3 text-amber-400"></i>
+            <span>Swap Cups</span>
+          </button>
+          <button
+            @click="resetCalibration()"
+            class="px-2.5 py-1 rounded bg-[#181d24] hover:bg-[#202731] border border-[#27303d] text-stone-200 transition active:scale-95 flex items-center gap-1"
+          >
+            <i data-lucide="rotate-ccw" class="w-3 h-3 text-stone-400"></i>
+            <span>Reset Alignment</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+      
+      <!-- VIEW 1: COMPARATOR STUDIO -->
+      <section x-show="activeSection === 'workspace'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Center Column: Visual Viewer (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+          
+          <!-- Mode Selector Toolbar -->
+          <div class="bg-[#13171d] border border-[#212732] rounded-xl p-2.5 sm:p-3 flex flex-wrap items-center justify-between gap-3 shadow-md">
+            
+            <!-- Segmented Mode Buttons -->
+            <div class="flex items-center bg-[#0b0e12] p-1 rounded-lg border border-[#1e242f] text-xs font-medium">
+              <button
+                @click="setMode('split')"
+                class="px-3 py-1.5 rounded-md transition flex items-center gap-1.5"
+                :class="mode === 'split' ? 'bg-amber-600 text-white font-semibold shadow-sm' : 'text-stone-400 hover:text-white'"
+              >
+                <i data-lucide="split" class="w-3.5 h-3.5"></i>
+                <span>Split</span>
+              </button>
+              <button
+                @click="setMode('crossfade')"
+                class="px-3 py-1.5 rounded-md transition flex items-center gap-1.5"
+                :class="mode === 'crossfade' ? 'bg-amber-600 text-white font-semibold shadow-sm' : 'text-stone-400 hover:text-white'"
+              >
+                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                <span>Crossfade</span>
+              </button>
+              <button
+                @click="setMode('side')"
+                class="px-3 py-1.5 rounded-md transition flex items-center gap-1.5"
+                :class="mode === 'side' ? 'bg-amber-600 text-white font-semibold shadow-sm' : 'text-stone-400 hover:text-white'"
+              >
+                <i data-lucide="columns-2" class="w-3.5 h-3.5"></i>
+                <span>Side-by-Side</span>
+              </button>
+              <button
+                @click="setMode('diff')"
+                class="px-3 py-1.5 rounded-md transition flex items-center gap-1.5"
+                :class="mode === 'diff' ? 'bg-amber-600 text-white font-semibold shadow-sm' : 'text-stone-400 hover:text-white'"
+              >
+                <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+                <span>Diff Filter</span>
+              </button>
+            </div>
+
+            <!-- Viewport Auxiliaries (Orientation, Guides, Blink) -->
+            <div class="flex items-center gap-2 text-xs">
+              
+              <!-- Blink Alternator Toggle -->
+              <button
+                @click="toggleBlink()"
+                class="px-2.5 py-1.5 rounded-lg border transition flex items-center gap-1.5"
+                :class="isBlinking ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 animate-pulse' : 'bg-[#181d24] text-stone-300 border-[#262f3c] hover:bg-[#202731]'"
+                title="Rapidly flashes between Cup 1 and Cup 2 to instantly detect shape drift"
+              >
+                <i data-lucide="eye" class="w-3.5 h-3.5 text-amber-500"></i>
+                <span x-text="isBlinking ? 'Blinking ON' : 'Blink'"></span>
+              </button>
+
+              <!-- Orientation Toggle (for Split Mode) -->
+              <button
+                x-show="mode === 'split'"
+                @click="toggleOrientation()"
+                class="px-2.5 py-1.5 rounded-lg bg-[#181d24] hover:bg-[#202731] border border-[#262f3c] text-stone-200 transition flex items-center gap-1.5"
+              >
+                <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-amber-500"></i>
+                <span x-text="orientation === 'vertical' ? 'Vertical' : 'Horizontal'"></span>
+              </button>
+
+              <!-- Guides Toggle -->
+              <button
+                @click="toggleGuides()"
+                class="px-2.5 py-1.5 rounded-lg border transition flex items-center gap-1.5"
+                :class="showGuides ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'bg-[#181d24] text-stone-300 border-[#262f3c] hover:bg-[#202731]'"
+              >
+                <i data-lucide="grid" class="w-3.5 h-3.5 text-amber-500"></i>
+                <span>Guides</span>
+              </button>
+
+            </div>
+          </div>
+
+          <!-- Guides Sub-bar (if guides active) -->
+          <div
+            x-show="showGuides"
+            x-transition
+            class="bg-[#12151a] border border-[#202631] rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-400"
+          >
+            <span class="font-medium text-stone-300 flex items-center gap-1.5">
+              <i data-lucide="target" class="w-3.5 h-3.5 text-amber-400"></i>
+              Overlay Layers:
+            </span>
+            <div class="flex items-center gap-3">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" x-model="guideRings" class="rounded accent-amber-600" />
+                <span>Rim Rings</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" x-model="guideCrosshair" class="rounded accent-amber-600" />
+                <span>Axes Crosshairs</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" x-model="guideDiagonals" class="rounded accent-amber-600" />
+                <span>Cut Angle Spokes</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" x-model="guideThirds" class="rounded accent-amber-600" />
+                <span>Rule of Thirds</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Primary Viewport Canvas -->
+          <div
+            id="viewportContainer"
+            @dragover.prevent="isDraggingFile = true"
+            @dragleave.prevent="isDraggingFile = false"
+            @drop="onViewportDrop($event)"
+            class="relative w-full aspect-square max-w-[680px] mx-auto rounded-2xl bg-[#0f1216] border-2 border-[#1f252f] shadow-2xl overflow-hidden checkerboard select-none"
+          >
+            
+            <!-- STAGE: Split / Crossfade / Diff Modes -->
+            <div
+              id="viewportStage"
+              x-show="mode !== 'side'"
+              @mousedown="startDragSplit($event)"
+              @mousemove="onDragSplit($event)"
+              @mouseup="stopDragSplit()"
+              @mouseleave="stopDragSplit()"
+              @touchstart="startDragSplit($event)"
+              @touchmove="onDragSplit($event)"
+              @touchend="stopDragSplit()"
+              class="relative w-full h-full overflow-hidden"
+              :class="mode === 'split' ? (orientation === 'vertical' ? 'cursor-ew-resize' : 'cursor-ns-resize') : 'cursor-default'"
+            >
+              
+              <!-- LAYER 2: Practice Pour (Cup 2) with user transforms -->
+              <div
+                class="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none"
+                :style="`opacity: ${cup2Opacity / 100}`"
+              >
+                <img
+                  :src="cup2Src"
+                  alt="Latte Art Cup 2"
+                  class="w-full h-full object-contain origin-center will-change-transform"
+                  :style="`transform: ${getCup2Transform()}`"
+                />
+                <span class="absolute bottom-3 right-3 text-[11px] font-semibold bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-amber-300 border border-amber-500/30 shadow-md">
+                  Cup 2 &bull; Practice
+                </span>
+              </div>
+
+              <!-- LAYER 1: Goal / Reference (Cup 1) -->
+              <div
+                class="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none"
+                :style="{
+                  clipPath: getClipPath(),
+                  opacity: mode === 'crossfade' ? (1 - (splitPosition / 100)).toFixed(2) : '1',
+                  filter: mode === 'diff' ? 'difference' : 'none'
+                }"
+              >
+                <img
+                  :src="cup1Src"
+                  alt="Latte Art Cup 1"
+                  class="w-full h-full object-contain origin-center"
+                />
+                <span
+                  x-show="mode !== 'diff'"
+                  class="absolute top-3 left-3 text-[11px] font-semibold bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-stone-200 border border-stone-700 shadow-md"
+                >
+                  Cup 1 &bull; Goal
+                </span>
+              </div>
+
+              <!-- Symmetry Guides Overlay -->
+              <div x-show="showGuides" class="absolute inset-0 pointer-events-none z-20">
+                <!-- Center Axes Crosshairs -->
+                <div x-show="guideCrosshair" class="absolute inset-x-0 top-1/2 h-px bg-amber-400/80 border-t border-dashed border-amber-400"></div>
+                <div x-show="guideCrosshair" class="absolute inset-y-0 left-1/2 w-px bg-amber-400/80 border-l border-dashed border-amber-400"></div>
+                
+                <!-- Concentric Circular Alignment Rings (Pour Spread) -->
+                <div x-show="guideRings" class="absolute inset-0 m-[12%] rounded-full border border-amber-400/30 border-dashed"></div>
+                <div x-show="guideRings" class="absolute inset-0 m-[22%] rounded-full border border-amber-400/50"></div>
+                <div x-show="guideRings" class="absolute inset-0 m-[34%] rounded-full border border-amber-400/30 border-dashed"></div>
+                <div x-show="guideRings" class="absolute inset-0 m-[44%] rounded-full border border-amber-400/60"></div>
+
+                <!-- Diagonal Pitcher Tilt Guides -->
+                <div x-show="guideDiagonals" class="absolute inset-0">
+                  <svg class="w-full h-full opacity-60">
+                    <line x1="0" y1="0" x2="100%" y2="100%" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4" />
+                    <line x1="100%" y1="0" x2="0" y2="100%" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4" />
+                  </svg>
+                </div>
+
+                <!-- Rule of Thirds -->
+                <div x-show="guideThirds" class="absolute inset-0">
+                  <div class="absolute inset-x-0 top-[33.33%] h-px bg-sky-400/40"></div>
+                  <div class="absolute inset-x-0 top-[66.66%] h-px bg-sky-400/40"></div>
+                  <div class="absolute inset-y-0 left-[33.33%] w-px bg-sky-400/40"></div>
+                  <div class="absolute inset-y-0 left-[66.66%] w-px bg-sky-400/40"></div>
+                </div>
+              </div>
+
+              <!-- Draggable Split Divider Line & Knob (Split Mode Only) -->
+              <div x-show="mode === 'split'" class="absolute inset-0 pointer-events-none z-30">
+                <!-- Vertical Divider -->
+                <div
+                  x-show="orientation === 'vertical'"
+                  class="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.9)]"
+                  :style="`left: ${splitPosition}%`"
+                ></div>
+                <!-- Horizontal Divider -->
+                <div
+                  x-show="orientation === 'horizontal'"
+                  class="absolute left-0 right-0 h-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.9)]"
+                  :style="`top: ${splitPosition}%`"
+                ></div>
+
+                <!-- Draggable Handle Knob -->
+                <div
+                  class="absolute w-9 h-9 rounded-full bg-white text-stone-900 border-2 border-amber-500 shadow-2xl flex items-center justify-center pointer-events-auto cursor-grab active:cursor-grabbing hover:scale-105 transition-transform -translate-x-1/2 -translate-y-1/2"
+                  :style="orientation === 'vertical' ? `left: ${splitPosition}%; top: 50%` : `left: 50%; top: ${splitPosition}%`"
+                >
+                  <i x-show="orientation === 'vertical'" data-lucide="chevrons-left-right" class="w-4 h-4 text-stone-900"></i>
+                  <i x-show="orientation === 'horizontal'" data-lucide="chevrons-up-down" class="w-4 h-4 text-stone-900"></i>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- STAGE 2: Side-by-Side Dual Synchronized Screen -->
+            <div
+              x-show="mode === 'side'"
+              class="absolute inset-0 w-full h-full grid grid-cols-2 gap-2 bg-[#0b0e12] p-2 z-10"
+            >
+              <!-- Left View (Cup 1 Goal) -->
+              <div class="relative w-full h-full bg-[#13171d] rounded-xl overflow-hidden flex items-center justify-center border border-[#1e2531]">
+                <img :src="cup1Src" alt="Cup 1 Goal" class="w-full h-full object-contain" />
+                <span class="absolute bottom-2 left-2 text-[10px] bg-black/85 px-2.5 py-1 rounded-md text-stone-200 border border-stone-700">
+                  Cup 1: Goal
+                </span>
+              </div>
+              
+              <!-- Right View (Cup 2 Practice) -->
+              <div class="relative w-full h-full bg-[#13171d] rounded-xl overflow-hidden flex items-center justify-center border border-[#1e2531]">
+                <img
+                  :src="cup2Src"
+                  alt="Cup 2 Practice"
+                  class="w-full h-full object-contain origin-center"
+                  :style="`transform: ${getCup2Transform()}`"
+                />
+                <span class="absolute bottom-2 left-2 text-[10px] bg-black/85 px-2.5 py-1 rounded-md text-amber-300 border border-amber-500/40">
+                  Cup 2: Practice
+                </span>
+              </div>
+            </div>
+
+            <!-- Drag & Drop Hover Overlay -->
+            <div
+              x-show="isDraggingFile"
+              class="absolute inset-0 bg-amber-600/35 backdrop-blur-sm border-2 border-dashed border-amber-400 z-50 rounded-2xl flex flex-col items-center justify-center text-white"
+            >
+              <i data-lucide="image-plus" class="w-12 h-12 text-amber-300 mb-2"></i>
+              <p class="font-bold text-lg">Drop your coffee photo here</p>
+              <p class="text-xs text-stone-200">Release to load into active slot</p>
+            </div>
+
+          </div>
+
+          <!-- Bottom Control Bar: Quick Slider & Percentage Scrub -->
+          <div class="bg-[#13171d] border border-[#212732] rounded-xl px-4 py-3 flex items-center gap-4 shadow-sm">
+            <span class="text-xs text-stone-400 font-mono w-24 whitespace-nowrap">
+              Goal (<span x-text="Math.round(100 - splitPosition)" class="font-tabular"></span>%)
+            </span>
+
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="0.5"
+              x-model="splitPosition"
+              class="flex-1 cursor-pointer h-2 bg-[#202732] rounded-lg"
+            />
+
+            <span class="text-xs text-amber-400 font-mono w-28 text-right whitespace-nowrap">
+              Practice (<span x-text="Math.round(splitPosition)" class="font-tabular"></span>%)
+            </span>
+
+            <!-- Quick Jump Buttons -->
+            <div class="hidden sm:flex items-center gap-1 pl-2 border-l border-[#242b36] text-xs font-tabular">
+              <button
+                @click="jumpSplit(25)"
+                class="px-2 py-0.5 rounded bg-[#181d24] hover:bg-[#222a36] text-stone-300 transition"
+              >
+                25%
+              </button>
+              <button
+                @click="jumpSplit(50)"
+                class="px-2 py-0.5 rounded bg-[#181d24] hover:bg-[#222a36] text-stone-300 transition"
+              >
+                50%
+              </button>
+              <button
+                @click="jumpSplit(75)"
+                class="px-2 py-0.5 rounded bg-[#181d24] hover:bg-[#222a36] text-stone-300 transition"
+              >
+                75%
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Calibration & Photo Slots (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col gap-4">
+
+          <!-- Source Photos Slot Box -->
+          <div class="bg-[#13171d] border border-[#212732] rounded-2xl p-4 shadow-xl">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="folder-input" class="w-4 h-4 text-amber-500"></i>
+                Source Photos
+              </h2>
+              <span class="text-[11px] text-stone-400">Click or drop file</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              
+              <!-- Cup 1 Slot (Goal) -->
+              <div
+                @click="activeSlot = 1"
+                class="border bg-[#0b0e12]/80 rounded-xl p-2.5 flex flex-col items-center text-center gap-2 transition cursor-pointer relative group"
+                :class="activeSlot === 1 ? 'border-amber-500 ring-1 ring-amber-500/30' : 'border-[#222935] hover:border-stone-600'"
+              >
+                <div class="w-full aspect-square rounded-lg overflow-hidden bg-[#151920] flex items-center justify-center border border-[#252d3a]">
+                  <img :src="cup1Src" class="w-full h-full object-cover" />
+                </div>
+                <div class="w-full">
+                  <p class="text-[11px] font-semibold text-stone-200 truncate" x-text="cup1Name || 'Cup 1 (Goal)'"></p>
+                  <label class="block text-[10px] text-amber-400 hover:text-amber-300 cursor-pointer pt-0.5">
+                    Browse File
+                    <input
+                      type="file"
+                      accept="image/*"
+                      @change="handleFileInput($event, 1)"
+                      class="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Cup 2 Slot (Practice) -->
+              <div
+                @click="activeSlot = 2"
+                class="border bg-[#0b0e12]/80 rounded-xl p-2.5 flex flex-col items-center text-center gap-2 transition cursor-pointer relative group"
+                :class="activeSlot === 2 ? 'border-amber-500 ring-1 ring-amber-500/30' : 'border-[#222935] hover:border-stone-600'"
+              >
+                <div class="w-full aspect-square rounded-lg overflow-hidden bg-[#151920] flex items-center justify-center border border-[#252d3a]">
+                  <img :src="cup2Src" class="w-full h-full object-cover" />
+                </div>
+                <div class="w-full">
+                  <p class="text-[11px] font-semibold text-amber-300 truncate" x-text="cup2Name || 'Cup 2 (Practice)'"></p>
+                  <label class="block text-[10px] text-amber-400 hover:text-amber-300 cursor-pointer pt-0.5">
+                    Browse File
+                    <input
+                      type="file"
+                      accept="image/*"
+                      @change="handleFileInput($event, 2)"
+                      class="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Cup 2 Geometric Calibration Studio -->
+          <div class="bg-[#13171d] border border-[#212732] rounded-2xl p-4 shadow-xl">
+            <div class="flex items-center justify-between mb-3 border-b border-[#212732] pb-2">
+              <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-amber-500"></i>
+                Cup 2 Calibration
+              </h2>
+              <button
+                @click="resetCalibration()"
+                class="text-[11px] text-amber-400 hover:text-amber-300 transition"
+              >
+                Reset Center
+              </button>
+            </div>
+
+            <p class="text-xs text-stone-400 mb-3 leading-relaxed">
+              Align camera height, cup angle, and rim centers for pixel-perfect comparison:
+            </p>
+
+            <!-- Cup Profile Selector -->
+            <div class="mb-4">
+              <span class="text-[11px] text-stone-300 block mb-1.5 font-medium">Standard Cup Geometry:</span>
+              <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+                <button
+                  @click="applyCupProfile('acme180')"
+                  class="py-1 px-1.5 rounded border transition truncate"
+                  :class="cupProfile === 'acme180' ? 'bg-amber-600/20 border-amber-500 text-amber-300 font-semibold' : 'bg-[#181d24] border-[#252e3b] text-stone-300 hover:bg-[#202731]'"
+                >
+                  Acme 180ml
+                </button>
+                <button
+                  @click="applyCupProfile('loveramics250')"
+                  class="py-1 px-1.5 rounded border transition truncate"
+                  :class="cupProfile === 'loveramics250' ? 'bg-amber-600/20 border-amber-500 text-amber-300 font-semibold' : 'bg-[#181d24] border-[#252e3b] text-stone-300 hover:bg-[#202731]'"
+                >
+                  Loveramics
+                </button>
+                <button
+                  @click="applyCupProfile('notneutral150')"
+                  class="py-1 px-1.5 rounded border transition truncate"
+                  :class="cupProfile === 'notneutral150' ? 'bg-amber-600/20 border-amber-500 text-amber-300 font-semibold' : 'bg-[#181d24] border-[#252e3b] text-stone-300 hover:bg-[#202731]'"
+                >
+                  NotNeutral
+                </button>
+              </div>
+            </div>
+
+            <!-- X Offset -->
+            <div class="space-y-1 mb-3">
+              <div class="flex justify-between text-xs">
+                <span class="text-stone-300">Offset X:</span>
+                <span class="font-tabular text-amber-400" x-text="`${offsetX} px`"></span>
+              </div>
+              <input
+                type="range"
+                min="-150"
+                max="150"
+                x-model.number="offsetX"
+                class="w-full h-1.5 bg-[#202732] rounded"
+              />
+            </div>
+
+            <!-- Y Offset -->
+            <div class="space-y-1 mb-3">
+              <div class="flex justify-between text-xs">
+                <span class="text-stone-300">Offset Y:</span>
+                <span class="font-tabular text-amber-400" x-text="`${offsetY} px`"></span>
+              </div>
+              <input
+                type="range"
+                min="-150"
+                max="150"
+                x-model.number="offsetY"
+                class="w-full h-1.5 bg-[#202732] rounded"
+              />
+            </div>
+
+            <!-- Micro Nudge D-Pad -->
+            <div class="mb-4 bg-[#0d1014] p-2 rounded-xl border border-[#212732] flex items-center justify-between">
+              <span class="text-[11px] text-stone-400 pl-1">Micro Nudge (±1px):</span>
+              <div class="flex items-center gap-1">
+                <button
+                  @click="nudge(-1, 0, 0, 0)"
+                  class="w-7 h-7 rounded bg-[#181d24] hover:bg-[#232b36] border border-[#28313e] flex items-center justify-center text-stone-300 active:scale-95"
+                >
+                  <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                </button>
+                <div class="flex flex-col gap-1">
+                  <button
+                    @click="nudge(0, -1, 0, 0)"
+                    class="w-7 h-7 rounded bg-[#181d24] hover:bg-[#232b36] border border-[#28313e] flex items-center justify-center text-stone-300 active:scale-95"
+                  >
+                    <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button
+                    @click="nudge(0, 1, 0, 0)"
+                    class="w-7 h-7 rounded bg-[#181d24] hover:bg-[#232b36] border border-[#28313e] flex items-center justify-center text-stone-300 active:scale-95"
+                  >
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+                <button
+                  @click="nudge(1, 0, 0, 0)"
+                  class="w-7 h-7 rounded bg-[#181d24] hover:bg-[#232b36] border border-[#28313e] flex items-center justify-center text-stone-300 active:scale-95"
+                >
+                  <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Scale / Zoom -->
+            <div class="space-y-1 mb-3">
+              <div class="flex justify-between text-xs">
+                <span class="text-stone-300">Magnification Scale:</span>
+                <span class="font-tabular text-amber-400" x-text="`${Math.round(scale * 100)}%`"></span>
+              </div>
+              <input
+                type="range"
+                min="0.6"
+                max="1.8"
+                step="0.01"
+                x-model.number="scale"
+                class="w-full h-1.5 bg-[#202732] rounded"
+              />
+            </div>
+
+            <!-- Rotation -->
+            <div class="space-y-1 mb-3">
+              <div class="flex justify-between text-xs">
+                <span class="text-stone-300">Angle Rotation:</span>
+                <span class="font-tabular text-amber-400" x-text="`${rotate}°`"></span>
+              </div>
+              <input
+                type="range"
+                min="-45"
+                max="45"
+                step="0.5"
+                x-model.number="rotate"
+                class="w-full h-1.5 bg-[#202732] rounded"
+              />
+            </div>
+
+            <!-- Horizontal Mirror Checkbox -->
+            <div class="flex items-center justify-between pt-1 mb-2">
+              <label class="flex items-center gap-2 text-xs text-stone-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  x-model="flipH"
+                  class="rounded accent-amber-600"
+                />
+                <span>Mirror Horizontal (Check Bilateral)</span>
+              </label>
+              <button
+                @click="resetCalibration()"
+                class="text-[11px] text-stone-400 hover:text-white"
+              >
+                Reset All
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Evaluation Tips Card -->
+          <div class="bg-[#13171d]/60 border border-[#212732] rounded-2xl p-4 text-xs space-y-2">
+            <h3 class="font-semibold text-amber-400 flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              Barista Pour Checklist
+            </h3>
+            <ul class="text-stone-300 space-y-1.5 list-disc list-inside">
+              <li><strong>Base Wrap:</strong> Base tier should wrap around 60% of cup perimeter without breaking crema edge.</li>
+              <li><strong>Center Cut Axis:</strong> Use the vertical dashed guide to test if cut-through pulls straight without curve.</li>
+              <li><strong>Crema Contrast:</strong> Diff filter highlights light leaks or washed-out halos around heart lobes.</li>
+            </ul>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- VIEW 2: PATTERN PRESETS CATALOG -->
+      <section x-show="activeSection === 'presets'" class="space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-white tracking-tight">Latte Art Pattern Catalog</h2>
+          <p class="text-xs text-stone-400 mt-1">
+            Choose from championship-grade reference patterns or realistic practice attempts to test your pour accuracy.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <template x-for="preset in presets" :key="preset.id">
+            <div class="bg-[#13171d] border border-[#212732] rounded-2xl p-4 flex flex-col justify-between hover:border-amber-500/50 transition">
+              
+              <div>
+                <!-- Thumbnail -->
+                <div class="w-full aspect-square rounded-xl overflow-hidden bg-[#0d1014] border border-[#222934] mb-3 relative flex items-center justify-center">
+                  <img :src="preset.generate()" :alt="preset.name" class="w-full h-full object-cover" />
+                  <span
+                    class="absolute top-2.5 right-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-sm border"
+                    :class="preset.category === 'Goal' ? 'text-amber-300 border-amber-500/40' : 'text-stone-300 border-stone-600'"
+                    x-text="preset.category"
+                  ></span>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 mb-1">
+                  <h3 class="font-bold text-sm text-white" x-text="preset.name"></h3>
+                  <span class="text-[11px] font-medium text-stone-400" x-text="preset.difficulty"></span>
+                </div>
+
+                <p class="text-xs text-stone-400 leading-relaxed mb-4" x-text="preset.description"></p>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="grid grid-cols-2 gap-2 pt-2 border-t border-[#1e2430]">
+                <button
+                  @click="loadPreset(preset, 1)"
+                  class="py-1.5 px-2 rounded-lg bg-[#181d24] hover:bg-[#222934] border border-[#27303e] text-xs font-medium text-stone-200 transition text-center"
+                >
+                  Load as Goal (Cup 1)
+                </button>
+                <button
+                  @click="loadPreset(preset, 2)"
+                  class="py-1.5 px-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-xs font-medium text-amber-300 transition text-center"
+                >
+                  Load as Practice (Cup 2)
+                </button>
+              </div>
+
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <!-- VIEW 3: SCA RUBRIC SCORECARD -->
+      <section x-show="activeSection === 'scorecard'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left: Evaluation Form (7 cols) -->
+        <div class="lg:col-span-7 bg-[#13171d] border border-[#212732] rounded-2xl p-6 shadow-xl space-y-6">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="award" class="w-5 h-5 text-amber-500"></i>
+              Specialty Coffee Barista Rubric
+            </h2>
+            <p class="text-xs text-stone-400 mt-1">
+              Score your pour across the 5 international championship criteria (0 to 10 scale).
+            </p>
+          </div>
+
+          <!-- Criteria 1: Symmetry -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-semibold text-stone-200">1. Bilateral Symmetry & Pattern Balance</span>
+              <span class="font-tabular font-bold text-amber-400 text-sm" x-text="`${scoreSymmetry} / 10`"></span>
+            </div>
+            <p class="text-[11px] text-stone-400">Alignment of left and right wing structures relative to central pour axis.</p>
+            <input type="range" min="1" max="10" step="1" x-model.number="scoreSymmetry" class="w-full h-2 bg-[#202732] rounded-lg" />
+          </div>
+
+          <!-- Criteria 2: Crema Contrast -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-semibold text-stone-200">2. Contrast & Crema Definition</span>
+              <span class="font-tabular font-bold text-amber-400 text-sm" x-text="`${scoreContrast} / 10`"></span>
+            </div>
+            <p class="text-[11px] text-stone-400">Crisp contrast boundary between glossy white microfoam and dark hazelnut crema.</p>
+            <input type="range" min="1" max="10" step="1" x-model.number="scoreContrast" class="w-full h-2 bg-[#202732] rounded-lg" />
+          </div>
+
+          <!-- Criteria 3: Cut Axis -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-semibold text-stone-200">3. Stem Cut-Through & Axis Alignment</span>
+              <span class="font-tabular font-bold text-amber-400 text-sm" x-text="`${scoreCut} / 10`"></span>
+            </div>
+            <p class="text-[11px] text-stone-400">Linear path of final pull-through slice through heart center without hooking.</p>
+            <input type="range" min="1" max="10" step="1" x-model.number="scoreCut" class="w-full h-2 bg-[#202732] rounded-lg" />
+          </div>
+
+          <!-- Criteria 4: Foam Texture -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-semibold text-stone-200">4. Microfoam Gloss & Aeration Quality</span>
+              <span class="font-tabular font-bold text-amber-400 text-sm" x-text="`${scoreTexture} / 10`"></span>
+            </div>
+            <p class="text-[11px] text-stone-400">Silky wet-paint sheen with zero visible macro bubbles or dry foam clumps.</p>
+            <input type="range" min="1" max="10" step="1" x-model.number="scoreTexture" class="w-full h-2 bg-[#202732] rounded-lg" />
+          </div>
+
+          <!-- Criteria 5: Cup Harmony -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-semibold text-stone-200">5. Cup Placement & Size Harmony</span>
+              <span class="font-tabular font-bold text-amber-400 text-sm" x-text="`${scoreHarmony} / 10`"></span>
+            </div>
+            <p class="text-[11px] text-stone-400">Pattern fills 70–85% of cup surface, oriented cleanly toward mug handle.</p>
+            <input type="range" min="1" max="10" step="1" x-model.number="scoreHarmony" class="w-full h-2 bg-[#202732] rounded-lg" />
+          </div>
+
+          <!-- Notes -->
+          <div class="space-y-1.5 pt-2 border-t border-[#1e2430]">
+            <label class="block text-xs font-semibold text-stone-200">Barista Steam & Pour Notes</label>
+            <textarea
+              x-model="baristaNotes"
+              rows="3"
+              placeholder="e.g. 62°C whole milk, WPM round spout pitcher, tilted cup at 45 degrees, stem cut pulled high..."
+              class="w-full bg-[#0d1014] border border-[#212732] rounded-xl p-3 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-500"
+            ></textarea>
+          </div>
+
+          <button
+            @click="saveToHistory()"
+            class="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40"
+          >
+            <i data-lucide="bookmark-plus" class="w-4 h-4"></i>
+            <span>Log Pour to History</span>
+          </button>
+
+        </div>
+
+        <!-- Right: Real-time Grade & Metrics (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-4">
+          
+          <!-- Big Score Banner -->
+          <div class="bg-[#13171d] border border-[#212732] rounded-2xl p-6 shadow-xl flex flex-col items-center text-center">
+            <span class="text-xs uppercase tracking-wider text-stone-400 font-semibold mb-2">Total Score</span>
+            
+            <div class="flex items-baseline gap-2 mb-2">
+              <span class="text-6xl font-bold font-tabular text-amber-400" x-text="totalScore"></span>
+              <span class="text-stone-500 font-tabular text-xl">/ 50</span>
+            </div>
+
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1c222c] border border-[#283241] mb-4">
+              <i data-lucide="medal" class="w-4 h-4 text-amber-400"></i>
+              <span class="font-bold text-xs" :class="scoreGradeColor" x-text="scoreGrade"></span>
+            </div>
+
+            <div class="w-full bg-[#0d1014] rounded-xl p-3 border border-[#202633] text-left text-xs space-y-2">
+              <div class="flex justify-between text-stone-400">
+                <span>Cup 1 (Goal):</span>
+                <span class="text-white font-medium truncate max-w-[170px]" x-text="cup1Name"></span>
+              </div>
+              <div class="flex justify-between text-stone-400">
+                <span>Cup 2 (Practice):</span>
+                <span class="text-amber-300 font-medium truncate max-w-[170px]" x-text="cup2Name"></span>
+              </div>
+              <div class="flex justify-between text-stone-400">
+                <span>Calibration Drift:</span>
+                <span class="font-tabular text-stone-300" x-text="`${offsetX}px X, ${offsetY}px Y, ${rotate}°`"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="bg-[#13171d] border border-[#212732] rounded-2xl p-4 shadow-xl flex gap-3">
+            <button
+              @click="exportAnalysis()"
+              class="flex-1 py-2 px-3 rounded-xl bg-[#181d24] hover:bg-[#222934] border border-[#28313e] text-xs font-semibold text-stone-200 transition flex items-center justify-center gap-1.5"
+            >
+              <i data-lucide="file-down" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Export Report</span>
+            </button>
+            <button
+              @click="activeSection = 'workspace'"
+              class="flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition flex items-center justify-center gap-1.5"
+            >
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+              <span>Back to Studio</span>
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- VIEW 4: POUR HISTORY LOG -->
+      <section x-show="activeSection === 'history'" class="space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-white tracking-tight">Pour Practice History</h2>
+            <p class="text-xs text-stone-400 mt-1">
+              Track your symmetry evolution and microfoam consistency over successive sessions.
+            </p>
+          </div>
+
+          <button
+            x-show="history.length > 0"
+            @click="history = []; localStorage.removeItem('baristalens_history'); notify('History cleared')"
+            class="text-xs text-stone-400 hover:text-red-400 transition"
+          >
+            Clear History
+          </button>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          x-show="history.length === 0"
+          class="bg-[#13171d] border border-[#212732] rounded-2xl p-12 text-center flex flex-col items-center justify-center"
+        >
+          <div class="w-12 h-12 rounded-2xl bg-[#1c222c] border border-[#283241] flex items-center justify-center mb-3">
+            <i data-lucide="history" class="w-6 h-6 text-stone-400"></i>
+          </div>
+          <h3 class="font-bold text-base text-white mb-1">No Practice Sessions Logged Yet</h3>
+          <p class="text-xs text-stone-400 max-w-sm mb-4">
+            Upload your practice pour, score it against a goal cup in the rubric, and save it to track your progress.
+          </p>
+          <button
+            @click="activeSection = 'workspace'"
+            class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs transition"
+          >
+            Go to Comparator Studio
+          </button>
+        </div>
+
+        <!-- History Grid -->
+        <div x-show="history.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <template x-for="item in history" :key="item.id">
+            <div class="bg-[#13171d] border border-[#212732] rounded-2xl p-4 flex flex-col justify-between hover:border-stone-600 transition">
+              
+              <div>
+                <div class="flex items-center justify-between mb-3 text-xs">
+                  <span class="text-stone-400" x-text="item.dateStr"></span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-bold font-tabular text-amber-400" x-text="`${item.scores.total} / 50`"></span>
+                    <span class="text-stone-400">&bull;</span>
+                    <span class="text-stone-300 font-medium" x-text="item.scores.grade"></span>
+                  </div>
+                </div>
+
+                <!-- Visual Comparison Thumbnails -->
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                  <div class="bg-[#0b0e12] rounded-lg overflow-hidden aspect-square border border-[#222934] relative">
+                    <img :src="item.cup1Thumb" class="w-full h-full object-cover" />
+                    <span class="absolute bottom-1 left-1 text-[9px] bg-black/80 px-1.5 py-0.5 rounded text-stone-300">Goal</span>
+                  </div>
+                  <div class="bg-[#0b0e12] rounded-lg overflow-hidden aspect-square border border-[#222934] relative">
+                    <img :src="item.cup2Thumb" class="w-full h-full object-cover" />
+                    <span class="absolute bottom-1 left-1 text-[9px] bg-black/80 px-1.5 py-0.5 rounded text-amber-300">Practice</span>
+                  </div>
+                </div>
+
+                <p class="text-xs text-stone-300 font-medium mb-1 truncate" x-text="`${item.cup1Name} vs ${item.cup2Name}`"></p>
+                <p x-show="item.notes" class="text-xs text-stone-400 italic line-clamp-2 mb-3" x-text="item.notes"></p>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-[#1e2430]">
+                <button
+                  @click="loadHistoryItem(item)"
+                  class="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1"
+                >
+                  <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                  <span>Restore Session</span>
+                </button>
+                <button
+                  @click="deleteHistoryItem(item.id)"
+                  class="text-xs text-stone-500 hover:text-red-400 transition"
+                >
+                  Delete
+                </button>
+              </div>
+
+            </div>
+          </template>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Floating Toast Notification -->
+    <div
+      x-show="showToast"
+      x-transition:enter="transition ease-out duration-200"
+      x-transition:enter-start="opacity-0 translate-y-3"
+      x-transition:enter-end="opacity-100 translate-y-0"
+      x-transition:leave="transition ease-in duration-150"
+      x-transition:leave-start="opacity-100 translate-y-0"
+      x-transition:leave-end="opacity-0 translate-y-3"
+      class="fixed bottom-5 right-5 z-50 bg-[#171b21] border border-amber-500/40 text-stone-100 px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-medium"
+    >
+      <i data-lucide="check-circle" class="w-4 h-4 text-amber-400"></i>
+      <span x-text="toastMessage"></span>
+    </div>
+
+    <!-- Main Module Script -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

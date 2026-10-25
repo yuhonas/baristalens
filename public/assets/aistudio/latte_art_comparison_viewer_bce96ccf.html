@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Latte Art Photo Comparison Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            charcoal: {
+              800: '#1c2024',
+              900: '#121417',
+              950: '#0b0d0f'
+            },
+            amber: {
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309'
+            },
+            crema: {
+              100: '#fdfbf7',
+              200: '#f7eee3',
+              300: '#e6ccb2',
+              400: '#ddb892',
+              500: '#b08968',
+              700: '#7f5539',
+              900: '#43281c'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom range sliders */
+    input[type=range] {
+      accent-color: #d97706;
+    }
+    .checkerboard {
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+      background-image: 
+        linear-gradient(45deg, #181b20 25%, transparent 25%, transparent 75%, #181b20 75%, #181b20),
+        linear-gradient(45deg, #181b20 25%, #121417 25%, #121417 75%, #181b20 75%, #181b20);
+    }
+  </style>
+</head>
+<body class="bg-charcoal-950 text-crema-100 min-h-screen flex flex-col font-sans antialiased selection:bg-amber-600 selection:text-white">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-charcoal-900 border-b border-charcoal-800 sticky top-0 z-50 px-4 sm:px-6 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-crema-900 flex items-center justify-center shadow-lg shadow-black/50 border border-amber-500/30">
+          <i data-lucide="coffee" class="w-5 h-5 text-crema-100"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">BaristaLens</h1>
+            <span class="text-[10px] tracking-wider uppercase font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">Photo Comparator</span>
+          </div>
+          <p class="text-xs text-stone-400">Pixel-accurate alignment for reference vs. practice pours</p>
+        </div>
+      </div>
+
+      <!-- Quick Global Actions -->
+      <div class="flex items-center gap-2">
+        <button id="swapBtn" class="px-3 py-1.5 rounded-lg bg-charcoal-800 hover:bg-stone-800 border border-charcoal-700 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition active:scale-95 text-stone-200">
+          <i data-lucide="arrow-left-right" class="w-4 h-4 text-amber-500"></i>
+          <span>Swap Images</span>
+        </button>
+        <button id="resetTransformBtn" class="px-3 py-1.5 rounded-lg bg-charcoal-800 hover:bg-stone-800 border border-charcoal-700 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition active:scale-95 text-stone-200">
+          <i data-lucide="rotate-ccw" class="w-4 h-4 text-amber-500"></i>
+          <span>Reset Alignment</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notice / Quick File Loader Bar -->
+  <aside class="bg-gradient-to-r from-charcoal-900 via-stone-900 to-charcoal-900 border-b border-charcoal-800 py-2.5 px-4">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-stone-300">
+      <div class="flex items-center gap-2 text-stone-300">
+        <i data-lucide="info" class="w-4 h-4 text-amber-400 flex-shrink-0"></i>
+        <span>Drop your original <strong class="text-white">latte-art-tulip-design-*.webp</strong> and <strong class="text-white">Gemini_Generated_Image_*.jpeg</strong> anywhere, or use the drop slots below:</span>
+      </div>
+
+      <!-- Individual File Drop/Select Buttons -->
+      <div class="flex items-center gap-2">
+        <label class="cursor-pointer px-2.5 py-1 rounded bg-stone-800 hover:bg-stone-700 text-amber-300 border border-stone-700 font-medium transition flex items-center gap-1.5">
+          <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+          <span>Load Cup 1 (Goal)</span>
+          <input type="file" id="fileCup1" accept="image/*" class="hidden">
+        </label>
+        <label class="cursor-pointer px-2.5 py-1 rounded bg-stone-800 hover:bg-stone-700 text-amber-300 border border-stone-700 font-medium transition flex items-center gap-1.5">
+          <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+          <span>Load Cup 2 (Practice)</span>
+          <input type="file" id="fileCup2" accept="image/*" class="hidden">
+        </label>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Workspace Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- Comparison Viewer Column (8 cols on desktop) -->
+    <div class="lg:col-span-8 flex flex-col gap-4">
+
+      <!-- View Controls Bar -->
+      <div class="bg-charcoal-900 border border-charcoal-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+        <!-- Modes -->
+        <div class="flex items-center bg-charcoal-950 p-1 rounded-lg border border-charcoal-800 text-xs sm:text-sm font-medium">
+          <button id="modeSplit" class="px-3 py-1.5 rounded-md bg-amber-600 text-white font-semibold transition flex items-center gap-1.5">
+            <i data-lucide="split" class="w-4 h-4"></i> Split
+          </button>
+          <button id="modeCrossfade" class="px-3 py-1.5 rounded-md text-stone-400 hover:text-white transition flex items-center gap-1.5">
+            <i data-lucide="layers" class="w-4 h-4"></i> Crossfade
+          </button>
+          <button id="modeSideBySide" class="px-3 py-1.5 rounded-md text-stone-400 hover:text-white transition flex items-center gap-1.5">
+            <i data-lucide="columns-2" class="w-4 h-4"></i> Side-by-Side
+          </button>
+          <button id="modeDifference" class="px-3 py-1.5 rounded-md text-stone-400 hover:text-white transition flex items-center gap-1.5">
+            <i data-lucide="scan" class="w-4 h-4"></i> Diff
+          </button>
+        </div>
+
+        <!-- Secondary Controls -->
+        <div class="flex items-center gap-2 text-xs">
+          <button id="orientationBtn" class="px-2.5 py-1.5 rounded-lg bg-charcoal-800 hover:bg-stone-800 border border-charcoal-700 text-stone-200 flex items-center gap-1.5 transition">
+            <i data-lucide="split-square-vertical" id="orientationIcon" class="w-4 h-4 text-amber-500"></i>
+            <span id="orientationText">Vertical</span>
+          </button>
+
+          <button id="gridBtn" class="px-2.5 py-1.5 rounded-lg bg-charcoal-800 hover:bg-stone-800 border border-charcoal-700 text-stone-200 flex items-center gap-1.5 transition">
+            <i data-lucide="crosshair" class="w-4 h-4 text-amber-500"></i>
+            <span>Symmetry Grid</span>
+            <span id="gridStatus" class="text-[9px] px-1 py-0.2 bg-stone-700 rounded text-stone-300 font-mono ml-0.5">OFF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Primary Photo Viewport -->
+      <div id="dropContainer" class="relative w-full aspect-square max-w-[680px] mx-auto rounded-2xl bg-charcoal-900 border-2 border-charcoal-800 shadow-2xl overflow-hidden checkerboard select-none">
+
+        <!-- Split / Overlay Stage -->
+        <div id="stage" class="relative w-full h-full overflow-hidden cursor-ew-resize">
+
+          <!-- Layer 2: Cup 2 (Practice Pour / Bamboo Saucer by default) -->
+          <div id="layer2Container" class="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center">
+            <img id="img2" src="" alt="Latte Art Cup 2" class="w-full h-full object-contain pointer-events-none origin-center will-change-transform">
+            <span id="badgeCup2" class="absolute bottom-3 right-3 text-[11px] font-semibold bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-full text-amber-300 border border-amber-500/30 shadow pointer-events-none">
+              Cup 2 &bull; Practice Pour
+            </span>
+          </div>
+
+          <!-- Layer 1: Cup 1 (Reference Cup by default, masked by split clip-path) -->
+          <div id="layer1Container" class="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center">
+            <img id="img1" src="" alt="Latte Art Cup 1" class="w-full h-full object-contain pointer-events-none origin-center">
+            <span id="badgeCup1" class="absolute top-3 left-3 text-[11px] font-semibold bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-full text-crema-100 border border-stone-600 shadow pointer-events-none">
+              Cup 1 &bull; Reference Goal
+            </span>
+          </div>
+
+          <!-- Alignment & Symmetry Guides Overlay -->
+          <div id="symmetryGuides" class="absolute inset-0 pointer-events-none hidden z-20">
+            <!-- Central Crosshairs -->
+            <div class="absolute inset-x-0 top-1/2 h-px bg-amber-400/70 border-t border-dashed border-amber-400"></div>
+            <div class="absolute inset-y-0 left-1/2 w-px bg-amber-400/70 border-l border-dashed border-amber-400"></div>
+            <!-- Concentric Circular Alignment Rings -->
+            <div class="absolute inset-0 m-[12%] rounded-full border border-amber-400/40 border-dashed"></div>
+            <div class="absolute inset-0 m-[25%] rounded-full border border-amber-400/60"></div>
+            <div class="absolute inset-0 m-[38%] rounded-full border border-amber-400/30"></div>
+          </div>
+
+          <!-- Split Divider Line and Draggable Handle -->
+          <div id="dividerWrap" class="absolute inset-0 pointer-events-none z-30">
+            <div id="dividerBar" class="absolute bg-white shadow-[0_0_10px_rgba(0,0,0,0.8)]"></div>
+            <div id="dividerKnob" class="absolute w-9 h-9 -ml-[18px] -mt-[18px] rounded-full bg-crema-100 text-charcoal-900 border-2 border-amber-500 shadow-2xl flex items-center justify-center pointer-events-auto cursor-grab active:cursor-grabbing hover:scale-105 transition-transform">
+              <i data-lucide="chevrons-left-right" id="knobIcon" class="w-4 h-4 text-charcoal-900"></i>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Side-by-Side Dual Synchronized Screen (Displayed only in Side-by-side mode) -->
+        <div id="sideContainer" class="hidden absolute inset-0 w-full h-full grid grid-cols-2 gap-1 bg-charcoal-950 p-2 z-10">
+          <div class="relative w-full h-full bg-charcoal-900 rounded-xl overflow-hidden flex items-center justify-center border border-charcoal-800">
+            <img id="sideImg1" src="" alt="Cup 1" class="w-full h-full object-contain">
+            <span class="absolute bottom-2 left-2 text-[10px] bg-black/80 px-2 py-0.5 rounded text-white border border-stone-700">Cup 1: Goal</span>
+          </div>
+          <div class="relative w-full h-full bg-charcoal-900 rounded-xl overflow-hidden flex items-center justify-center border border-charcoal-800">
+            <img id="sideImg2" src="" alt="Cup 2" class="w-full h-full object-contain origin-center">
+            <span class="absolute bottom-2 left-2 text-[10px] bg-black/80 px-2 py-0.5 rounded text-amber-300 border border-stone-700">Cup 2: Practice</span>
+          </div>
+        </div>
+
+        <!-- Drag & Drop Hover Overlay -->
+        <div id="dragDropOverlay" class="absolute inset-0 bg-amber-600/30 backdrop-blur-sm border-2 border-dashed border-amber-400 z-50 rounded-2xl flex flex-col items-center justify-center text-white pointer-events-none opacity-0 transition-opacity">
+          <i data-lucide="image-plus" class="w-12 h-12 text-amber-300 mb-2"></i>
+          <p class="font-bold text-lg">Drop your coffee photo here</p>
+          <p class="text-xs text-stone-200">Release to load into active slot</p>
+        </div>
+
+      </div>
+
+      <!-- Quick Interactive Slider Bar below Canvas -->
+      <div class="bg-charcoal-900 border border-charcoal-800 rounded-xl px-4 py-2.5 flex items-center gap-3">
+        <span id="sliderLeftLabel" class="text-xs text-stone-400 font-mono w-24">Cup 1 (100%)</span>
+        <input id="mainRange" type="range" min="0" max="100" value="50" class="flex-1 cursor-ew-resize h-2 bg-charcoal-800 rounded-lg">
+        <span id="sliderRightLabel" class="text-xs text-amber-400 font-mono w-24 text-right">Cup 2 (100%)</span>
+      </div>
+
+    </div>
+
+    <!-- Calibration & Image Management Sidebar (4 cols on desktop) -->
+    <div class="lg:col-span-4 flex flex-col gap-4">
+
+      <!-- Upload Drop Slots for specific cups -->
+      <div class="bg-charcoal-900 border border-charcoal-800 rounded-2xl p-4 shadow-xl">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2 mb-3">
+          <i data-lucide="folder-input" class="w-4 h-4 text-amber-500"></i>
+          Source Photos
+        </h2>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Cup 1 Box -->
+          <div id="slot1" class="border border-charcoal-700 bg-charcoal-950/70 hover:border-amber-500/50 rounded-xl p-2.5 flex flex-col items-center text-center gap-1.5 transition cursor-pointer relative group">
+            <div class="w-full aspect-square rounded-lg overflow-hidden bg-charcoal-900 flex items-center justify-center border border-charcoal-800">
+              <img id="thumb1" src="" class="w-full h-full object-cover">
+            </div>
+            <div class="w-full">
+              <p class="text-[11px] font-semibold text-stone-200 truncate">Cup 1 (Goal)</p>
+              <label class="block text-[10px] text-amber-400 hover:text-amber-300 cursor-pointer pt-0.5">
+                Change file
+                <input type="file" id="slotFile1" accept="image/*" class="hidden">
+              </label>
+            </div>
+          </div>
+
+          <!-- Cup 2 Box -->
+          <div id="slot2" class="border border-charcoal-700 bg-charcoal-950/70 hover:border-amber-500/50 rounded-xl p-2.5 flex flex-col items-center text-center gap-1.5 transition cursor-pointer relative group">
+            <div class="w-full aspect-square rounded-lg overflow-hidden bg-charcoal-900 flex items-center justify-center border border-charcoal-800">
+              <img id="thumb2" src="" class="w-full h-full object-cover">
+            </div>
+            <div class="w-full">
+              <p class="text-[11px] font-semibold text-amber-300 truncate">Cup 2 (Practice)</p>
+              <label class="block text-[10px] text-amber-400 hover:text-amber-300 cursor-pointer pt-0.5">
+                Change file
+                <input type="file" id="slotFile2" accept="image/*" class="hidden">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cup 2 Alignment / Nudge Calibration Panel -->
+      <div class="bg-charcoal-900 border border-charcoal-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-3 border-b border-charcoal-800 pb-2">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-amber-500"></i>
+            Cup 2 Calibration
+          </h2>
+          <span class="text-[10px] text-stone-400">Match rim & center</span>
+        </div>
+
+        <p class="text-xs text-stone-400 mb-4 leading-relaxed">
+          Because photos are taken from slightly different camera heights and angles, use these micro-offsets to align the heart and rim centers perfectly:
+        </p>
+
+        <!-- Offset X -->
+        <div class="space-y-1 mb-3">
+          <div class="flex justify-between text-xs">
+            <span class="text-stone-300">Offset X:</span>
+            <span id="valX" class="font-mono text-amber-400">0 px</span>
+          </div>
+          <input id="inputX" type="range" min="-120" max="120" value="0" class="w-full h-1.5 bg-charcoal-800 rounded">
+        </div>
+
+        <!-- Offset Y -->
+        <div class="space-y-1 mb-3">
+          <div class="flex justify-between text-xs">
+            <span class="text-stone-300">Offset Y:</span>
+            <span id="valY" class="font-mono text-amber-400">0 px</span>
+          </div>
+          <input id="inputY" type="range" min="-120" max="120" value="0" class="w-full h-1.5 bg-charcoal-800 rounded">
+        </div>
+
+        <!-- Scale / Zoom -->
+        <div class="space-y-1 mb-3">
+          <div class="flex justify-between text-xs">
+            <span class="text-stone-300">Scale / Magnification:</span>
+            <span id="valScale" class="font-mono text-amber-400">100%</span>
+          </div>
+          <input id="inputScale" type="range" min="70" max="160" value="100" class="w-full h-1.5 bg-charcoal-800 rounded">
+        </div>
+
+        <!-- Rotation -->
+        <div class="space-y-1 mb-4">
+          <div class="flex justify-between text-xs">
+            <span class="text-stone-300">Angle Rotation:</span>
+            <span id="valRotate" class="font-mono text-amber-400">0&deg;</span>
+          </div>
+          <input id="inputRotate" type="range" min="-30" max="30" value="0" class="w-full h-1.5 bg-charcoal-800 rounded">
+        </div>
+
+        <!-- Zero Calibration Button -->
+        <button id="zeroAllBtn" class="w-full py-1.5 rounded-lg bg-charcoal-800 hover:bg-stone-800 text-stone-200 border border-charcoal-700 text-xs font-medium transition flex items-center justify-center gap-1.5">
+          <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+          <span>Reset Alignment To Zero</span>
+        </button>
+      </div>
+
+      <!-- Tulip Pour Analysis Reference Tips -->
+      <div class="bg-charcoal-900/60 border border-charcoal-800 rounded-2xl p-4 text-xs space-y-2">
+        <h3 class="font-semibold text-white flex items-center gap-1.5 text-xs text-amber-400">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          Barista Evaluation Points
+        </h3>
+        <ul class="text-stone-300 space-y-1.5 list-disc list-inside">
+          <li><strong>Base Wrap:</strong> Notice how both pours achieve a wide horseshoe wing that cradles the tiers.</li>
+          <li><strong>Stem Axis:</strong> Switch to <span class="text-amber-300">Diff</span> or <span class="text-amber-300">Crosshair</span> to ensure your cut-through slice travels through the center.</li>
+          <li><strong>Heart Cap:</strong> Check the heart definition at the top of the stack for clean heart lobes without milk drags.</li>
+        </ul>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    /* =========================================================================
+       1. GENERATE PROCEDURAL HIGH-RESOLUTION RASTER BITMAPS AS DEFAULT IMAGES
+       (Guarantees immediate zero-lag raster images without external network dependencies)
+       ========================================================================= */
+    function createCup1Bitmap() {
+      const c = document.createElement('canvas');
+      c.width = 1000;
+      c.height = 1000;
+      const ctx = c.getContext('2d');
+
+      // 1. Crisp white photo studio tabletop
+      const bgGrad = ctx.createRadialGradient(500, 500, 100, 500, 500, 600);
+      bgGrad.addColorStop(0, '#ffffff');
+      bgGrad.addColorStop(0.7, '#f7f7f7');
+      bgGrad.addColorStop(1, '#e5e5e5');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, 1000, 1000);
+
+      // Cup Shadow
+      ctx.beginPath();
+      ctx.arc(510, 510, 440, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.filter = 'blur(16px)';
+      ctx.fill();
+      ctx.filter = 'none';
+
+      // Ceramic handle at bottom right
+      ctx.save();
+      ctx.translate(500, 500);
+      ctx.rotate(0.78);
+      ctx.beginPath();
+      ctx.roundRect(320, 160, 150, 65, [15, 30, 30, 15]);
+      ctx.fillStyle = '#1c1817';
+      ctx.fill();
+      ctx.restore();
+
+      // Outer Dark Rim of the cup
+      ctx.beginPath();
+      ctx.arc(500, 500, 430, 0, Math.PI * 2);
+      const rimGrad = ctx.createLinearGradient(100, 100, 900, 900);
+      rimGrad.addColorStop(0, '#2e2624');
+      rimGrad.addColorStop(0.5, '#191413');
+      rimGrad.addColorStop(1, '#0e0b0b');
+      ctx.fillStyle = rimGrad;
+      ctx.fill();
+
+      // Cup Inner Lip
+      ctx.beginPath();
+      ctx.arc(500, 500, 405, 0, Math.PI * 2);
+      ctx.fillStyle = '#453935';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(500, 500, 396, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a1310';
+      ctx.fill();
+
+      // Espresso Crema Surface
+      ctx.beginPath();
+      ctx.arc(500, 500, 390, 0, Math.PI * 2);
+      const cremaGrad = ctx.createRadialGradient(500, 490, 40, 500, 500, 390);
+      cremaGrad.addColorStop(0, '#d88531');
+      cremaGrad.addColorStop(0.4, '#c67324');
+      cremaGrad.addColorStop(0.75, '#a25413');
+      cremaGrad.addColorStop(0.94, '#7a3b0b');
+      cremaGrad.addColorStop(1, '#4e2305');
+      ctx.fillStyle = cremaGrad;
+      ctx.fill();
+
+      // Microfoam Flecks / Crema texturing
+      ctx.fillStyle = 'rgba(255, 230, 190, 0.08)';
+      for (let i = 0; i < 400; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const rad = Math.random() * 370;
+        ctx.beginPath();
+        ctx.arc(500 + Math.cos(angle) * rad, 500 + Math.sin(angle) * rad, Math.random() * 2 + 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw Reference Tulip Latte Art Leaves
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#ffffff';
+
+      // Outer Crescent Wings
+      ctx.beginPath();
+      ctx.lineWidth = 36;
+      ctx.lineCap = 'round';
+      ctx.arc(500, 500, 260, 0.7 * Math.PI, 0.3 * Math.PI, true);
+      ctx.stroke();
+
+      // Tier 1 Base Wings
+      drawTulipPetal(ctx, 500, 680, 210, 130);
+      // Tier 2
+      drawTulipPetal(ctx, 500, 600, 175, 110);
+      // Tier 3
+      drawTulipPetal(ctx, 500, 520, 140, 95);
+      // Tier 4
+      drawTulipPetal(ctx, 500, 450, 105, 80);
+      // Top Heart
+      drawHeart(ctx, 500, 290, 80);
+
+      // Central stem cut
+      ctx.beginPath();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#ffffff';
+      ctx.moveTo(500, 240);
+      ctx.lineTo(500, 750);
+      ctx.stroke();
+
+      return c.toDataURL('image/jpeg', 0.95);
+    }
+
+    function createCup2Bitmap() {
+      const c = document.createElement('canvas');
+      c.width = 1000;
+      c.height = 1000;
+      const ctx = c.getContext('2d');
+
+      // Tabletop background
+      ctx.fillStyle = '#dcd4c7';
+      ctx.fillRect(0, 0, 1000, 1000);
+
+      // Natural Bamboo Coaster with woodgrain
+      ctx.beginPath();
+      ctx.arc(505, 510, 480, 0, Math.PI * 2);
+      const woodGrad = ctx.createRadialGradient(505, 510, 50, 505, 510, 480);
+      woodGrad.addColorStop(0, '#e8be89');
+      woodGrad.addColorStop(0.7, '#cf9758');
+      woodGrad.addColorStop(0.95, '#af7638');
+      woodGrad.addColorStop(1, '#8f5b24');
+      ctx.fillStyle = woodGrad;
+      ctx.fill();
+
+      // Coaster slats / wood grain rings
+      ctx.strokeStyle = 'rgba(120, 70, 25, 0.25)';
+      ctx.lineWidth = 4;
+      for (let y = 100; y < 900; y += 110) {
+        ctx.beginPath();
+        ctx.moveTo(100, y);
+        ctx.bezierCurveTo(400, y - 10, 700, y + 15, 900, y);
+        ctx.stroke();
+      }
+
+      // White ceramic cup body
+      ctx.beginPath();
+      ctx.arc(500, 495, 435, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.filter = 'blur(12px)';
+      ctx.fill();
+      ctx.filter = 'none';
+
+      // Cup handle (right)
+      ctx.beginPath();
+      ctx.roundRect(830, 450, 110, 90, 20);
+      ctx.fillStyle = '#f0ede6';
+      ctx.fill();
+
+      // White mug rim
+      ctx.beginPath();
+      ctx.arc(500, 495, 430, 0, Math.PI * 2);
+      const mugGrad = ctx.createLinearGradient(200, 200, 800, 800);
+      mugGrad.addColorStop(0, '#ffffff');
+      mugGrad.addColorStop(0.6, '#f3ece1');
+      mugGrad.addColorStop(1, '#dad1c2');
+      ctx.fillStyle = mugGrad;
+      ctx.fill();
+
+      // Inner cup lip
+      ctx.beginPath();
+      ctx.arc(500, 495, 395, 0, Math.PI * 2);
+      ctx.fillStyle = '#653b1b';
+      ctx.fill();
+
+      // Crema base for practice cup
+      ctx.beginPath();
+      ctx.arc(500, 495, 388, 0, Math.PI * 2);
+      const cremaGrad = ctx.createRadialGradient(500, 495, 30, 500, 495, 388);
+      cremaGrad.addColorStop(0, '#c37a2e');
+      cremaGrad.addColorStop(0.5, '#ab6322');
+      cremaGrad.addColorStop(0.85, '#874613');
+      cremaGrad.addColorStop(1, '#5e2e0a');
+      ctx.fillStyle = cremaGrad;
+      ctx.fill();
+
+      // Foam texture
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#ffffff';
+
+      // Practice pour outer wing wrapping
+      ctx.beginPath();
+      ctx.lineWidth = 30;
+      ctx.lineCap = 'round';
+      ctx.arc(500, 495, 250, 0.73 * Math.PI, 0.27 * Math.PI, true);
+      ctx.stroke();
+
+      // Slightly softer, organic tulip stacks
+      drawTulipPetal(ctx, 500, 670, 220, 135);
+      drawTulipPetal(ctx, 500, 595, 180, 115);
+      drawTulipPetal(ctx, 500, 515, 145, 100);
+      drawTulipPetal(ctx, 500, 445, 110, 85);
+      drawHeart(ctx, 500, 285, 82);
+
+      // Center cut
+      ctx.beginPath();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#fbf7ee';
+      ctx.moveTo(500, 235);
+      ctx.lineTo(500, 745);
+      ctx.stroke();
+
+      return c.toDataURL('image/jpeg', 0.95);
+    }
+
+    function drawTulipPetal(ctx, cx, cy, w, h) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - h);
+      ctx.bezierCurveTo(cx + w, cy - h * 0.4, cx + w * 0.8, cy + h * 0.4, cx, cy + h);
+      ctx.bezierCurveTo(cx - w * 0.8, cy + h * 0.4, cx - w, cy - h * 0.4, cx, cy - h);
+      ctx.fill();
+    }
+
+    function drawHeart(ctx, cx, cy, size) {
+      ctx.beginPath();
+      const topCurveHeight = size * 0.3;
+      ctx.moveTo(cx, cy + size * 0.6);
+      ctx.bezierCurveTo(cx - size, cy, cx - size, cy - topCurveHeight, cx, cy - topCurveHeight * 0.1);
+      ctx.bezierCurveTo(cx + size, cy - topCurveHeight, cx + size, cy, cx, cy + size * 0.6);
+      ctx.fill();
+    }
+
+    /* =========================================================================
+       2. STATE & APPLICATION CONTROLLER
+       ========================================================================= */
+    const state = {
+      cup1Src: '',
+      cup2Src: '',
+      mode: 'split', // 'split' | 'crossfade' | 'side' | 'diff'
+      orientation: 'vertical', // 'vertical' | 'horizontal'
+      splitPosition: 50,
+      showGrid: false,
+      swapped: false,
+      isDragging: false,
+      // Alignment transform for Cup 2
+      offsetX: 0,
+      offsetY: 0,
+      scale: 1.0,
+      rotate: 0
+    };
+
+    // DOM Elements
+    const img1 = document.getElementById('img1');
+    const img2 = document.getElementById('img2');
+    const thumb1 = document.getElementById('thumb1');
+    const thumb2 = document.getElementById('thumb2');
+    const sideImg1 = document.getElementById('sideImg1');
+    const sideImg2 = document.getElementById('sideImg2');
+
+    const stage = document.getElementById('stage');
+    const layer1Container = document.getElementById('layer1Container');
+    const layer2Container = document.getElementById('layer2Container');
+    const dividerWrap = document.getElementById('dividerWrap');
+    const dividerBar = document.getElementById('dividerBar');
+    const dividerKnob = document.getElementById('dividerKnob');
+    const knobIcon = document.getElementById('knobIcon');
+    const symmetryGuides = document.getElementById('symmetryGuides');
+    const sideContainer = document.getElementById('sideContainer');
+    const dropContainer = document.getElementById('dropContainer');
+    const dragDropOverlay = document.getElementById('dragDropOverlay');
+
+    const mainRange = document.getElementById('mainRange');
+    const sliderLeftLabel = document.getElementById('sliderLeftLabel');
+    const sliderRightLabel = document.getElementById('sliderRightLabel');
+
+    // Controls
+    const modeSplit = document.getElementById('modeSplit');
+    const modeCrossfade = document.getElementById('modeCrossfade');
+    const modeSideBySide = document.getElementById('modeSideBySide');
+    const modeDifference = document.getElementById('modeDifference');
+
+    const orientationBtn = document.getElementById('orientationBtn');
+    const orientationText = document.getElementById('orientationText');
+    const orientationIcon = document.getElementById('orientationIcon');
+
+    const gridBtn = document.getElementById('gridBtn');
+    const gridStatus = document.getElementById('gridStatus');
+
+    const swapBtn = document.getElementById('swapBtn');
+    const resetTransformBtn = document.getElementById('resetTransformBtn');
+    const zeroAllBtn = document.getElementById('zeroAllBtn');
+
+    // Micro adjustment inputs
+    const inputX = document.getElementById('inputX');
+    const inputY = document.getElementById('inputY');
+    const inputScale = document.getElementById('inputScale');
+    const inputRotate = document.getElementById('inputRotate');
+    const valX = document.getElementById('valX');
+    const valY = document.getElementById('valY');
+    const valScale = document.getElementById('valScale');
+    const valRotate = document.getElementById('valRotate');
+
+    // File Pickers
+    const fileCup1 = document.getElementById('fileCup1');
+    const fileCup2 = document.getElementById('fileCup2');
+    const slotFile1 = document.getElementById('slotFile1');
+    const slotFile2 = document.getElementById('slotFile2');
+
+    /* =========================================================================
+       3. RENDER FUNCTION
+       ========================================================================= */
+    function render() {
+      const pos = state.splitPosition;
+
+      // 1. Transform on Cup 2 (Offset, Scale, Rotate)
+      const transformCss = `translate(${state.offsetX}px, ${state.offsetY}px) scale(${state.scale}) rotate(${state.rotate}deg)`;
+      img2.style.transform = transformCss;
+      sideImg2.style.transform = transformCss;
+
+      // 2. Modes Handling
+      if (state.mode === 'split') {
+        stage.classList.remove('hidden');
+        sideContainer.classList.add('hidden');
+        dividerWrap.classList.remove('hidden');
+
+        // Reset blend filters
+        layer1Container.style.filter = 'none';
+        layer1Container.style.opacity = '1';
+        layer2Container.style.filter = 'none';
+
+        if (state.orientation === 'vertical') {
+          layer1Container.style.clipPath = `polygon(0% 0%, ${pos}% 0%, ${pos}% 100%, 0% 100%)`;
+          dividerBar.style.width = '2px';
+          dividerBar.style.height = '100%';
+          dividerBar.style.left = `${pos}%`;
+          dividerBar.style.top = '0';
+          dividerBar.style.transform = 'none';
+
+          dividerKnob.style.left = `${pos}%`;
+          dividerKnob.style.top = '50%';
+          dividerKnob.style.transform = 'translate(-50%, -50%)';
+          knobIcon.setAttribute('data-lucide', 'chevrons-left-right');
+          stage.style.cursor = 'ew-resize';
+        } else {
+          layer1Container.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${pos}%, 0% ${pos}%)`;
+          dividerBar.style.width = '100%';
+          dividerBar.style.height = '2px';
+          dividerBar.style.left = '0';
+          dividerBar.style.top = `${pos}%`;
+          dividerBar.style.transform = 'none';
+
+          dividerKnob.style.left = '50%';
+          dividerKnob.style.top = `${pos}%`;
+          dividerKnob.style.transform = 'translate(-50%, -50%)';
+          knobIcon.setAttribute('data-lucide', 'chevrons-up-down');
+          stage.style.cursor = 'ns-resize';
+        }
+        lucide.createIcons();
+
+      } else if (state.mode === 'crossfade') {
+        stage.classList.remove('hidden');
+        sideContainer.classList.add('hidden');
+        dividerWrap.classList.add('hidden');
+        layer1Container.style.clipPath = 'none';
+        layer1Container.style.filter = 'none';
+        layer2Container.style.filter = 'none';
+
+        // Opacity crossfade
+        layer1Container.style.opacity = (1 - (pos / 100)).toFixed(2);
+        stage.style.cursor = 'pointer';
+
+      } else if (state.mode === 'diff') {
+        stage.classList.remove('hidden');
+        sideContainer.classList.add('hidden');
+        dividerWrap.classList.add('hidden');
+        layer1Container.style.clipPath = 'none';
+        layer1Container.style.opacity = '1';
+        layer1Container.style.filter = 'difference';
+        layer2Container.style.filter = 'none';
+        stage.style.cursor = 'default';
+
+      } else if (state.mode === 'side') {
+        stage.classList.add('hidden');
+        sideContainer.classList.remove('hidden');
+        sideContainer.classList.add('grid');
+      }
+
+      // Sync Range input
+      mainRange.value = pos;
+    }
+
+    // Interactive Dragging on Viewer Stage
+    function updateDrag(e) {
+      if (state.mode === 'side') return;
+      const rect = stage.getBoundingClientRect();
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+
+      let pct;
+      if (state.orientation === 'vertical' || state.mode === 'crossfade') {
+        pct = ((clientX - rect.left) / rect.width) * 100;
+      } else {
+        pct = ((clientY - rect.top) / rect.height) * 100;
+      }
+
+      pct = Math.max(0, Math.min(100, pct));
+      state.splitPosition = pct;
+      render();
+    }
+
+    stage.addEventListener('mousedown', (e) => {
+      state.isDragging = true;
+      updateDrag(e);
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (state.isDragging) updateDrag(e);
+    });
+    window.addEventListener('mouseup', () => {
+      state.isDragging = false;
+    });
+
+    stage.addEventListener('touchstart', (e) => {
+      state.isDragging = true;
+      updateDrag(e);
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      if (state.isDragging) updateDrag(e);
+    }, { passive: true });
+    window.addEventListener('touchend', () => {
+      state.isDragging = false;
+    });
+
+    mainRange.addEventListener('input', (e) => {
+      state.splitPosition = parseFloat(e.target.value);
+      render();
+    });
+
+    /* =========================================================================
+       4. MODE SELECTORS
+       ========================================================================= */
+    const modeButtons = [modeSplit, modeCrossfade, modeSideBySide, modeDifference];
+    function selectMode(targetMode, activeBtn) {
+      state.mode = targetMode;
+      modeButtons.forEach(btn => {
+        btn.classList.remove('bg-amber-600', 'text-white', 'font-semibold');
+        btn.classList.add('text-stone-400');
+      });
+      activeBtn.classList.remove('text-stone-400');
+      activeBtn.classList.add('bg-amber-600', 'text-white', 'font-semibold');
+
+      if (targetMode === 'crossfade') {
+        sliderLeftLabel.textContent = 'Cup 1 (100%)';
+        sliderRightLabel.textContent = 'Cup 2 (100%)';
+      } else if (targetMode === 'diff') {
+        sliderLeftLabel.textContent = 'Edge Check';
+        sliderRightLabel.textContent = 'Difference';
+      } else {
+        sliderLeftLabel.textContent = 'Cup 1';
+        sliderRightLabel.textContent = 'Cup 2';
+      }
+
+      render();
+    }
+
+    modeSplit.addEventListener('click', () => selectMode('split', modeSplit));
+    modeCrossfade.addEventListener('click', () => selectMode('crossfade', modeCrossfade));
+    modeSideBySide.addEventListener('click', () => selectMode('side', modeSideBySide));
+    modeDifference.addEventListener('click', () => selectMode('diff', modeDifference));
+
+    // Orientation toggle
+    orientationBtn.addEventListener('click', () => {
+      if (state.orientation === 'vertical') {
+        state.orientation = 'horizontal';
+        orientationText.textContent = 'Horizontal';
+        orientationIcon.setAttribute('data-lucide', 'split-square-horizontal');
+      } else {
+        state.orientation = 'vertical';
+        orientationText.textContent = 'Vertical';
+        orientationIcon.setAttribute('data-lucide', 'split-square-vertical');
+      }
+      lucide.createIcons();
+      render();
+    });
+
+    // Grid toggle
+    gridBtn.addEventListener('click', () => {
+      state.showGrid = !state.showGrid;
+      if (state.showGrid) {
+        symmetryGuides.classList.remove('hidden');
+        gridStatus.textContent = 'ON';
+        gridStatus.classList.replace('bg-stone-700', 'bg-amber-500');
+        gridStatus.classList.replace('text-stone-300', 'text-charcoal-950');
+      } else {
+        symmetryGuides.classList.add('hidden');
+        gridStatus.textContent = 'OFF';
+        gridStatus.classList.replace('bg-amber-500', 'bg-stone-700');
+        gridStatus.classList.replace('text-charcoal-950', 'text-stone-300');
+      }
+    });
+
+    /* =========================================================================
+       5. CALIBRATION SLIDERS (X, Y, Scale, Rotation)
+       ========================================================================= */
+    inputX.addEventListener('input', (e) => {
+      state.offsetX = parseFloat(e.target.value);
+      valX.textContent = `${state.offsetX} px`;
+      render();
+    });
+
+    inputY.addEventListener('input', (e) => {
+      state.offsetY = parseFloat(e.target.value);
+      valY.textContent = `${state.offsetY} px`;
+      render();
+    });
+
+    inputScale.addEventListener('input', (e) => {
+      state.scale = parseFloat(e.target.value) / 100;
+      valScale.textContent = `${e.target.value}%`;
+      render();
+    });
+
+    inputRotate.addEventListener('input', (e) => {
+      state.rotate = parseFloat(e.target.value);
+      valRotate.innerHTML = `${state.rotate}&deg;`;
+      render();
+    });
+
+    function resetCalibration() {
+      state.offsetX = 0;
+      state.offsetY = 0;
+      state.scale = 1.0;
+      state.rotate = 0;
+      inputX.value = 0;
+      inputY.value = 0;
+      inputScale.value = 100;
+      inputRotate.value = 0;
+      valX.textContent = '0 px';
+      valY.textContent = '0 px';
+      valScale.textContent = '100%';
+      valRotate.innerHTML = '0&deg;';
+      render();
+    }
+
+    zeroAllBtn.addEventListener('click', resetCalibration);
+    resetTransformBtn.addEventListener('click', resetCalibration);
+
+    // Swap Base vs Overlay Image
+    swapBtn.addEventListener('click', () => {
+      state.swapped = !state.swapped;
+      const tmp = state.cup1Src;
+      state.cup1Src = state.cup2Src;
+      state.cup2Src = tmp;
+      updateImageSources();
+    });
+
+    /* =========================================================================
+       6. FILE LOADERS & DRAG-AND-DROP HANDLERS
+       ========================================================================= */
+    function loadFileInto(file, slotNumber) {
+      if (!file || !file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (slotNumber === 1) {
+          state.cup1Src = e.target.result;
+        } else {
+          state.cup2Src = e.target.result;
+        }
+        updateImageSources();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function updateImageSources() {
+      img1.src = state.cup1Src;
+      img2.src = state.cup2Src;
+      sideImg1.src = state.cup1Src;
+      sideImg2.src = state.cup2Src;
+      thumb1.src = state.cup1Src;
+      thumb2.src = state.cup2Src;
+      render();
+    }
+
+    // Connect File Input triggers
+    fileCup1.addEventListener('change', (e) => loadFileInto(e.target.files[0], 1));
+    slotFile1.addEventListener('change', (e) => loadFileInto(e.target.files[0], 1));
+    fileCup2.addEventListener('change', (e) => loadFileInto(e.target.files[0], 2));
+    slotFile2.addEventListener('change', (e) => loadFileInto(e.target.files[0], 2));
+
+    // Global Container Drag and Drop
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropContainer.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dragDropOverlay.style.opacity = '1';
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropContainer.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dragDropOverlay.style.opacity = '0';
+      });
+    });
+
+    dropContainer.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        if (files.length >= 2) {
+          loadFileInto(files[0], 1);
+          loadFileInto(files[1], 2);
+        } else {
+          // If only 1 dropped, put into Cup 2 (user's pour)
+          loadFileInto(files[0], 2);
+        }
+      }
+    });
+
+    // Also support dropping directly onto the Slot 1 or Slot 2 boxes
+    const slot1 = document.getElementById('slot1');
+    const slot2 = document.getElementById('slot2');
+
+    [slot1, slot2].forEach((slot, idx) => {
+      slot.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        slot.classList.add('border-amber-400');
+      });
+      slot.addEventListener('dragleave', () => {
+        slot.classList.remove('border-amber-400');
+      });
+      slot.addEventListener('drop', (e) => {
+        e.preventDefault();
+        slot.classList.remove('border-amber-400');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadFileInto(e.dataTransfer.files[0], idx + 1);
+        }
+      });
+    });
+
+    /* =========================================================================
+       7. INITIALIZATION
+       ========================================================================= */
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      // Initialize with crisp procedural raster images as default previews
+      state.cup1Src = createCup1Bitmap();
+      state.cup2Src = createCup2Bitmap();
+      updateImageSources();
+    });
+  </script>
+</body>
+</html>

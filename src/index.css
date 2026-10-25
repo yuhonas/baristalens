@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-charcoal-950: #0b0d10;
+    --color-charcoal-900: #13171d;
+    --color-charcoal-850: #191f27;
+    --color-charcoal-800: #222933;
+    --color-charcoal-700: #333d4d;
+    --color-amber-500: #f59e0b;
+    --color-amber-400: #fbbf24;
+    --color-amber-600: #d97706;
+  }
+
+  body {
+    background-color: var(--color-charcoal-950);
+    color: #f3f4f6;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom range sliders */
+input[type="range"] {
+  accent-color: #d97706;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  cursor: pointer;
+  height: 14px;
+  width: 14px;
+  border-radius: 9999px;
+  background: #fbbf24;
+  border: 2px solid #13171d;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+}
+
+.checkerboard {
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+  background-image: 
+    linear-gradient(45deg, #16191f 25%, transparent 25%, transparent 75%, #16191f 75%, #16191f),
+    linear-gradient(45deg, #16191f 25%, #0f1216 25%, #0f1216 75%, #16191f 75%, #16191f);
+}
+
+.font-tabular {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hide scrollbar for tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
