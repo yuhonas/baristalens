@@ -1,5 +1,4 @@
-import Alpine from 'alpinejs';
-import persist from '@alpinejs/persist';
+import Alpine, { type AlpineComponent } from 'alpinejs';
 import { createIcons, icons } from 'lucide';
 import {
   PRESETS,
@@ -8,8 +7,6 @@ import {
   createPracticeTulipAttempt,
 } from './patterns';
 import { exportComparisonReport } from './export';
-
-Alpine.plugin(persist);
 
 export interface HistoryItem {
   id: string;
@@ -37,8 +34,13 @@ export interface HistoryItem {
   notes: string;
 }
 
+// Gives `this` Alpine's magics ($watch, $nextTick) inside the component object
+function defineComponent<T>(component: AlpineComponent<T>): AlpineComponent<T> {
+  return component;
+}
+
 export function baristaApp() {
-  return {
+  return defineComponent({
     // Navigation / view
     activeSection: 'workspace', // 'workspace' | 'presets' | 'scorecard' | 'history'
 
@@ -50,7 +52,7 @@ export function baristaApp() {
 
     // Rapid Blink / Alternator Comparison
     isBlinking: false,
-    blinkInterval: null as any,
+    blinkInterval: null as ReturnType<typeof setInterval> | null,
     blinkToggle: false,
 
     // Image Sources
@@ -91,7 +93,7 @@ export function baristaApp() {
     pitcherType: 'WPM 450ml Round Spout',
 
     // Presets catalog
-    presets: PRESETS as PatternPreset[],
+    presets: PRESETS,
 
     // History (persisted in localStorage)
     history: [] as HistoryItem[],
@@ -99,7 +101,7 @@ export function baristaApp() {
     // Notification toast
     toastMessage: '',
     showToast: false,
-    toastTimer: null as any,
+    toastTimer: null as ReturnType<typeof setTimeout> | null,
 
     init() {
       // Load default high-res procedural images
@@ -110,27 +112,27 @@ export function baristaApp() {
       try {
         const saved = localStorage.getItem('baristalens_history');
         if (saved) {
-          this.history = JSON.parse(saved);
+          this.history = JSON.parse(saved) as HistoryItem[];
         }
       } catch (e) {
         console.error('Failed to load history', e);
       }
 
       // Initialize icons
-      (this as any).$nextTick(() => {
+      void this.$nextTick(() => {
         this.renderIcons();
       });
 
       // Watch split position or inputs for re-rendering
-      (this as any).$watch('mode', () => {
+      this.$watch('mode', () => {
         if (this.isBlinking && this.mode !== 'crossfade') {
           this.stopBlink();
         }
-        (this as any).$nextTick(() => this.renderIcons());
+        void this.$nextTick(() => { this.renderIcons(); });
       });
 
-      (this as any).$watch('activeSection', () => {
-        (this as any).$nextTick(() => this.renderIcons());
+      this.$watch('activeSection', () => {
+        void this.$nextTick(() => { this.renderIcons(); });
       });
     },
 
@@ -272,15 +274,13 @@ export function baristaApp() {
       const stage = document.getElementById('viewportStage');
       if (!stage) return;
       const rect = stage.getBoundingClientRect();
-      const clientX = 'touches' in e && e.touches[0] ? e.touches[0].clientX : (e as MouseEvent).clientX;
-      const clientY = 'touches' in e && e.touches[0] ? e.touches[0].clientY : (e as MouseEvent).clientY;
+      const point = 'touches' in e ? e.touches.item(0) : e;
+      if (!point) return;
 
-      let pct = 50;
-      if (this.orientation === 'vertical') {
-        pct = ((clientX - rect.left) / rect.width) * 100;
-      } else {
-        pct = ((clientY - rect.top) / rect.height) * 100;
-      }
+      const pct =
+        this.orientation === 'vertical'
+          ? ((point.clientX - rect.left) / rect.width) * 100
+          : ((point.clientY - rect.top) / rect.height) * 100;
 
       this.splitPosition = Math.max(0, Math.min(100, Math.round(pct * 10) / 10));
     },
@@ -315,8 +315,9 @@ export function baristaApp() {
     // File Upload and Drag-Drop
     handleFileInput(event: Event, targetSlot: 1 | 2) {
       const input = event.target as HTMLInputElement;
-      if (input.files && input.files[0]) {
-        this.processFile(input.files[0], targetSlot);
+      const file = input.files?.item(0);
+      if (file) {
+        this.processFile(file, targetSlot);
       }
     },
 
@@ -359,11 +360,11 @@ export function baristaApp() {
     // Scorecard Computations
     get totalScore(): number {
       return (
-        Number(this.scoreSymmetry) +
-        Number(this.scoreContrast) +
-        Number(this.scoreCut) +
-        Number(this.scoreTexture) +
-        Number(this.scoreHarmony)
+        this.scoreSymmetry +
+        this.scoreContrast +
+        this.scoreCut +
+        this.scoreTexture +
+        this.scoreHarmony
       );
     },
 
@@ -387,7 +388,7 @@ export function baristaApp() {
     // Save to History Log
     saveToHistory() {
       const item: HistoryItem = {
-        id: 'pour_' + Date.now(),
+        id: `pour_${Date.now()}`,
         timestamp: Date.now(),
         dateStr: new Date().toLocaleDateString('en-US', {
           month: 'short',
@@ -494,10 +495,11 @@ export function baristaApp() {
         this.notify('Failed to generate export image');
       }
     },
-  };
+  });
 }
 
-// Attach to global window for Alpine
-(window as any).baristaApp = baristaApp;
-(window as any).Alpine = Alpine;
+Alpine.data('baristaApp', baristaApp);
+
+// Exposed for Alpine devtools / console debugging
+window.Alpine = Alpine;
 Alpine.start();

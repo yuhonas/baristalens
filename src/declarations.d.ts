@@ -1,4 +1,7 @@
-declare module '@alpinejs/persist' {
-  const persist: any;
-  export default persist;
+import type Alpine from 'alpinejs';
+
+declare global {
+  interface Window {
+    Alpine: typeof Alpine;
+  }
 }

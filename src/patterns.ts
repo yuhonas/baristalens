@@ -34,7 +34,8 @@ export function createChampionshipTulip(): string {
   const c = document.createElement('canvas');
   c.width = 1000;
   c.height = 1000;
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context unavailable');
 
   // Studio light background
   const bgGrad = ctx.createRadialGradient(500, 500, 100, 500, 500, 600);
@@ -139,7 +140,8 @@ export function createPracticeTulipAttempt(): string {
   const c = document.createElement('canvas');
   c.width = 1000;
   c.height = 1000;
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context unavailable');
 
   // Warm café tabletop background
   ctx.fillStyle = '#2a2420';
@@ -228,7 +230,8 @@ export function createClassicRosetta(): string {
   const c = document.createElement('canvas');
   c.width = 1000;
   c.height = 1000;
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context unavailable');
 
   // Background
   ctx.fillStyle = '#121417';
@@ -303,7 +306,8 @@ export function createSwanPattern(): string {
   const c = document.createElement('canvas');
   c.width = 1000;
   c.height = 1000;
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context unavailable');
 
   ctx.fillStyle = '#101216';
   ctx.fillRect(0, 0, 1000, 1000);
@@ -378,7 +382,8 @@ export function createWingedHeart(): string {
   const c = document.createElement('canvas');
   c.width = 1000;
   c.height = 1000;
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context unavailable');
 
   ctx.fillStyle = '#111317';
   ctx.fillRect(0, 0, 1000, 1000);

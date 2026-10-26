@@ -31,7 +31,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
+    img.onload = () => { resolve(img); };
     img.onerror = reject;
     img.src = src;
   });
@@ -41,7 +41,8 @@ export async function exportComparisonReport(data: ExportData): Promise<void> {
   const canvas = document.createElement('canvas');
   canvas.width = 1600;
   canvas.height = 1100;
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context unavailable');
 
   // Background
   ctx.fillStyle = '#0f1216';
