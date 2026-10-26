@@ -1,4 +1,4 @@
-# BaristaLens
+# BaristaLens [![CI](https://github.com/yuhonas/baristalens/actions/workflows/ci.yml/badge.svg)](https://github.com/yuhonas/baristalens/actions/workflows/ci.yml)
 
 Latte art photo comparator with pixel-accurate alignment, symmetry guides, and a competition scoring rubric.
 
