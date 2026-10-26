@@ -36,9 +36,9 @@ export default defineConfig([
     },
   },
 
-  // Node-side config files
+  // Node-side config files and Playwright specs
   {
-    files: ['*.config.{js,ts}'],
+    files: ['*.config.{js,ts}', 'e2e/**/*.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       globals: globals.node,
